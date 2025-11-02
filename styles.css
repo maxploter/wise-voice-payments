@@ -177,3 +177,45 @@
 .voice-transcript::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.5);
 }
+
+/* Action buttons after recording */
+.voice-action-buttons {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.voice-action-btn.upload-btn {
+  background: #4caf50;
+  color: white;
+  flex: 1;
+}
+
+.voice-action-btn.upload-btn:hover {
+  background: #45a049;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+}
+
+.voice-action-btn.secondary-btn {
+  background: rgba(255, 255, 255, 0.3);
+  color: white;
+  flex: 1;
+  backdrop-filter: blur(10px);
+}
+
+.voice-action-btn.secondary-btn:hover {
+  background: rgba(255, 255, 255, 0.4);
+  transform: translateY(-2px);
+}
+
+.voice-action-btn {
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
