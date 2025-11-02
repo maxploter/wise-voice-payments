@@ -43,8 +43,23 @@ Get up and running with Wise Voice Extension in 2 minutes!
 
 4. **Get Your PDF**
    - Review the transcript
-   - Click "📥 Download PDF"
-   - Your voice invoice is ready!
+   - Click "📥 Download PDF" to save it locally
+   - Or click "📤 Go to Upload Page" to navigate to Wise's upload page
+   - Upload page: `wise.com/send#/contact-beta/upload`
+
+## Upload to Wise
+
+After generating your PDF:
+
+1. **Option A - Auto Navigate**:
+   - Click "📤 Go to Upload Page" 
+   - You'll be taken to `wise.com/send#/contact-beta/upload`
+   - The extension will auto-detect and offer to fill the form
+
+2. **Option B - Manual**:
+   - Download the PDF
+   - Navigate to `wise.com/send#/contact-beta/upload`
+   - Upload the PDF manually
 
 ## Troubleshooting
 

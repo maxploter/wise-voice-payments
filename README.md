@@ -18,7 +18,7 @@ A Chrome extension that allows you to record voice notes and automatically conve
 3. Speak your invoice details (e.g., "Send 500 euros to John Smith, reference: March rent")
 4. Click stop when finished
 5. Review the transcript
-6. Download the PDF or upload directly to Wise
+6. Download the PDF or click "Go to Upload Page" to navigate to `wise.com/send#/contact-beta/upload`
 
 ## Installation
 
@@ -73,6 +73,19 @@ A Chrome extension that allows you to record voice notes and automatically conve
 - **Use natural language**: The extension captures exactly what you say
 - **Check permissions**: Grant microphone access when prompted
 - **Browser support**: Works best in Chrome and Edge (Web Speech API required)
+
+## Upload Page
+
+The extension is designed to work seamlessly with Wise's bill upload page:
+
+**Upload URL**: `https://wise.com/send#/contact-beta/upload`
+
+After recording your voice invoice:
+1. Click "Go to Upload Page" button - this will navigate you directly to the upload page
+2. The extension will detect the upload form and offer to auto-fill your PDF
+3. Review the details and submit to Wise
+
+Alternatively, you can download the PDF and manually upload it at any time.
 
 ## File Structure
 

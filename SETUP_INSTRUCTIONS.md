@@ -99,9 +99,10 @@ You should now see:
    - Click "📥 Download PDF"
    - PDF downloads to your Downloads folder
 
-7. **Open PDF**:
-   - Find the file: `voice-invoice-[timestamp].pdf`
-   - Open to verify content
+7. **Upload to Wise**:
+   - Click "📤 Go to Upload Page" to navigate to `wise.com/send#/contact-beta/upload`
+   - Or manually visit the upload page and the extension will auto-detect it
+   - Upload your PDF and submit
 
 ## Troubleshooting Installation
 

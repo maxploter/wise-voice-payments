@@ -281,7 +281,7 @@ function showUploadOptions(pdfBlob, text) {
     <p class="transcript-preview">${text.substring(0, 150)}${text.length > 150 ? '...' : ''}</p>
     <div class="button-group">
       <button id="download-pdf-btn" class="action-btn primary">📥 Download PDF</button>
-      <button id="find-upload-btn" class="action-btn">🔍 Find Upload Page</button>
+      <button id="find-upload-btn" class="action-btn">📤 Go to Upload Page</button>
       <button id="dismiss-btn" class="action-btn secondary">✖ Dismiss</button>
     </div>
   `;
@@ -296,18 +296,8 @@ function showUploadOptions(pdfBlob, text) {
   };
   
   document.getElementById('find-upload-btn').onclick = () => {
-    // Try to navigate to upload page or find upload button
-    const uploadLinks = [
-      ...document.querySelectorAll('a[href*="upload"]'),
-      ...document.querySelectorAll('a[href*="bill"]'),
-      ...document.querySelectorAll('button[data-testid*="upload"]')
-    ];
-    
-    if (uploadLinks.length > 0) {
-      uploadLinks[0].click();
-    } else {
-      alert('Could not find upload page automatically. Please navigate to the upload page manually, and the extension will auto-fill the PDF.');
-    }
+    // Navigate to the correct Wise upload page
+    window.location.href = 'https://wise.com/send#/contact-beta/upload';
   };
   
   document.getElementById('dismiss-btn').onclick = () => {
