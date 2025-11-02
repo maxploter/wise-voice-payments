@@ -5,7 +5,6 @@ let mediaRecorder;
 let audioChunks = [];
 let recognition;
 let isRecording = false;
-let flowState = 'initial'; // Track where we are in the flow
 
 // Initialize when DOM is ready
 if (document.readyState === 'loading') {
@@ -31,34 +30,58 @@ function watchUrlChanges() {
     const url = location.href;
     if (url !== lastUrl) {
       lastUrl = url;
+      console.log('URL changed to:', url);
       handleCurrentPage();
     }
   }).observe(document, { subtree: true, childList: true });
 }
 
-function handleCurrentPage() {
+async function handleCurrentPage() {
   const hash = window.location.hash;
 
   console.log('Current page hash:', hash);
+
+  // Check if we're in voice flow mode
+  const inVoiceFlow = await isInVoiceFlow();
+  console.log('In voice flow:', inVoiceFlow);
 
   // Check what page we're on and act accordingly
   if (hash.includes('/send') || hash === '' || hash === '#/') {
     // Main send page - show "Send via Voice" button
     injectSendViaVoiceButton();
-  } else if (hash.includes('/contact-beta/existing')) {
+  } else if (inVoiceFlow && hash.includes('/contact-beta/existing')) {
     // On recipient list page - auto-click "Add recipient"
+    console.log('Should auto-click Add recipient');
     autoClickAddRecipient();
-  } else if (hash.includes('/contact-beta/currency')) {
+  } else if (inVoiceFlow && hash.includes('/contact-beta/currency')) {
     // On currency page - WAIT for user to select
-    // After user selects, auto-click to method page
+    console.log('On currency page, waiting for user selection');
     watchForCurrencySelection();
-  } else if (hash.includes('/contact-beta/method')) {
+  } else if (inVoiceFlow && hash.includes('/contact-beta/method')) {
     // On method page - auto-click "Upload screenshot or invoice"
+    console.log('Should auto-click Upload option');
     autoClickUploadOption();
   } else if (hash.includes('/upload') || hash.includes('/contact-beta/ocr')) {
     // On upload page - show voice recorder
+    console.log('On upload page, showing voice recorder');
     injectVoiceRecorder();
   }
+}
+
+// Check if we're in the voice flow
+async function isInVoiceFlow() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['voiceFlowActive'], (result) => {
+      resolve(result.voiceFlowActive === true);
+    });
+  });
+}
+
+// Set voice flow state
+function setVoiceFlowActive(active) {
+  chrome.storage.local.set({ voiceFlowActive: active }, () => {
+    console.log('Voice flow active:', active);
+  });
 }
 
 // ============================================
@@ -70,19 +93,7 @@ function injectSendViaVoiceButton() {
     return;
   }
 
-  // Find a good location (try multiple selectors)
-  const possibleTargets = [
-    document.querySelector('main'),
-    document.querySelector('.container'),
-    document.body
-  ];
-
-  const targetElement = possibleTargets.find(el => el !== null);
-
-  if (!targetElement) {
-    setTimeout(injectSendViaVoiceButton, 1000);
-    return;
-  }
+  console.log('Injecting Send via Voice button');
 
   // Create floating button
   const btn = document.createElement('button');
@@ -97,7 +108,9 @@ function injectSendViaVoiceButton() {
 
 function startVoiceFlow() {
   console.log('Starting voice flow...');
-  flowState = 'started';
+
+  // Set flag that we're in voice flow mode
+  setVoiceFlowActive(true);
 
   // Redirect to recipient page
   window.location.href = 'https://wise.com/send#/contact-beta/existing';
@@ -107,20 +120,30 @@ function startVoiceFlow() {
 // STEP 2: Auto-click "Add recipient"
 // ============================================
 function autoClickAddRecipient() {
-  if (flowState !== 'started') return;
+  console.log('autoClickAddRecipient called');
 
-  console.log('Looking for Add recipient button...');
-
-  waitForElement('.List_addButton__HD7Fh, button:has-text("Add recipient")', 3000)
+  // Wait for the button to appear
+  waitForElement('.List_addButton__HD7Fh', 5000)
     .then(button => {
-      console.log('Found Add recipient button, clicking...');
+      console.log('Found Add recipient button:', button);
+
+      // Wait a bit for page to fully load
       setTimeout(() => {
+        console.log('Clicking Add recipient button...');
         button.click();
-        flowState = 'currency';
-      }, 500);
+      }, 800);
     })
-    .catch(() => {
-      console.log('Could not find Add recipient button');
+    .catch((error) => {
+      console.error('Could not find Add recipient button:', error);
+
+      // Try alternative selector
+      const addBtn = document.querySelector('button[class*="addButton"]');
+      if (addBtn) {
+        console.log('Found button with alternative selector, clicking...');
+        setTimeout(() => addBtn.click(), 800);
+      } else {
+        console.error('Button not found with any selector');
+      }
     });
 }
 
@@ -128,64 +151,69 @@ function autoClickAddRecipient() {
 // STEP 3: Wait for user to select currency
 // ============================================
 function watchForCurrencySelection() {
-  if (flowState !== 'currency') return;
-
-  console.log('On currency page, waiting for user selection...');
+  console.log('watchForCurrencySelection called');
 
   // Show a subtle helper message
   showHelper('Please select your currency');
 
-  // Watch for user clicking a currency
-  document.addEventListener('click', function currencyClickHandler(e) {
-    const currencyOption = e.target.closest('button[class*="option"]');
+  // Watch for clicks on the page
+  const clickHandler = (e) => {
+    // Check if user clicked a currency option
+    const button = e.target.closest('button');
+    if (!button) return;
 
-    if (currencyOption && currencyOption.querySelector('.wds-flag')) {
-      console.log('User selected currency');
+    // Check if this button has a flag (currency indicator)
+    const hasFlag = button.querySelector('.wds-flag, img[src*="flag"]');
+
+    if (hasFlag) {
+      console.log('User clicked currency option');
       removeHelper();
 
-      // Wait a bit for any animations
-      setTimeout(() => {
-        // Find and click continue/next button
-        const continueBtn = document.querySelector('button[type="submit"], button.wds-Button--primary');
-        if (continueBtn) {
-          continueBtn.click();
-          flowState = 'method';
-        }
-      }, 800);
+      // Remove listener
+      document.removeEventListener('click', clickHandler, true);
 
-      // Remove this event listener
-      document.removeEventListener('click', currencyClickHandler);
+      // Wait for animation/transition
+      setTimeout(() => {
+        // The page should automatically proceed to method selection
+        console.log('Currency selected, waiting for method page...');
+      }, 1000);
     }
-  }, true);
+  };
+
+  // Use capture phase to catch clicks early
+  document.addEventListener('click', clickHandler, true);
 }
 
 // ============================================
 // STEP 4: Auto-click "Upload screenshot or invoice"
 // ============================================
 function autoClickUploadOption() {
-  if (flowState !== 'method') return;
+  console.log('autoClickUploadOption called');
 
-  console.log('On method page, looking for Upload option...');
-
-  waitForElement('button', 3000)
+  waitForElement('button', 5000)
     .then(() => {
-      // Find the upload button by text content
+      // Find the upload button by checking for upload icon or text
       const buttons = Array.from(document.querySelectorAll('button'));
-      const uploadBtn = buttons.find(btn =>
-        btn.textContent.includes('Upload screenshot') ||
-        btn.textContent.includes('upload') && btn.textContent.includes('invoice')
-      );
+
+      const uploadBtn = buttons.find(btn => {
+        const text = btn.textContent.toLowerCase();
+        const hasUploadIcon = btn.querySelector('[data-testid="upload-icon"]');
+        return (text.includes('upload') && (text.includes('screenshot') || text.includes('invoice'))) || hasUploadIcon;
+      });
 
       if (uploadBtn) {
-        console.log('Found Upload button, clicking...');
+        console.log('Found Upload button:', uploadBtn);
         setTimeout(() => {
+          console.log('Clicking Upload button...');
           uploadBtn.click();
-          flowState = 'upload';
-        }, 500);
+        }, 800);
+      } else {
+        console.error('Could not find Upload button');
+        console.log('Available buttons:', buttons.map(b => b.textContent));
       }
     })
-    .catch(() => {
-      console.log('Could not find Upload button');
+    .catch((error) => {
+      console.error('Error finding buttons:', error);
     });
 }
 
@@ -198,39 +226,41 @@ function injectVoiceRecorder() {
     return;
   }
 
-  console.log('On upload page, injecting voice recorder...');
+  console.log('Injecting voice recorder...');
 
-  // Find the upload area
-  const uploadArea = document.querySelector('.upload-section, [data-testid="upload"], main');
+  // Clear voice flow flag since we've reached the end
+  setVoiceFlowActive(false);
 
-  if (!uploadArea) {
-    setTimeout(injectVoiceRecorder, 1000);
-    return;
-  }
+  // Find the upload area - wait for it if needed
+  waitForElement('main, .container, body', 2000)
+    .then(uploadArea => {
+      // Create voice recorder container
+      const container = document.createElement('div');
+      container.id = 'wise-voice-recorder';
+      container.className = 'wise-voice-container';
+      container.innerHTML = `
+        <div class="voice-recorder-panel">
+          <h3>🎤 Record Voice Invoice</h3>
+          <p>Speak your invoice details clearly</p>
+          <button id="voice-record-btn" class="voice-action-btn primary">
+            Start Recording
+          </button>
+          <div id="voice-status" class="voice-status" style="display: none;"></div>
+          <div id="voice-transcript" class="voice-transcript" style="display: none;"></div>
+        </div>
+      `;
 
-  // Create voice recorder container
-  const container = document.createElement('div');
-  container.id = 'wise-voice-recorder';
-  container.className = 'wise-voice-container';
-  container.innerHTML = `
-    <div class="voice-recorder-panel">
-      <h3>🎤 Record Voice Invoice</h3>
-      <p>Speak your invoice details clearly</p>
-      <button id="voice-record-btn" class="voice-action-btn primary">
-        Start Recording
-      </button>
-      <div id="voice-status" class="voice-status" style="display: none;"></div>
-      <div id="voice-transcript" class="voice-transcript" style="display: none;"></div>
-    </div>
-  `;
+      // Insert at the top of upload area
+      uploadArea.insertBefore(container, uploadArea.firstChild);
 
-  // Insert at the top of upload area
-  uploadArea.insertBefore(container, uploadArea.firstChild);
+      // Add event listener
+      document.getElementById('voice-record-btn').onclick = toggleRecording;
 
-  // Add event listener
-  document.getElementById('voice-record-btn').onclick = toggleRecording;
-
-  console.log('Voice recorder injected');
+      console.log('Voice recorder injected');
+    })
+    .catch(error => {
+      console.error('Could not inject voice recorder:', error);
+    });
 }
 
 // ============================================
@@ -403,9 +433,6 @@ function autoFillFileInput(pdfBlob, text) {
       console.log('PDF auto-uploaded to file input');
       updateStatus('✅ PDF uploaded! Click Continue below', 'success');
 
-      // Reset flow state
-      flowState = 'complete';
-
     } else {
       console.error('File input not found');
       updateStatus('❌ Could not find upload field', 'error');
@@ -421,15 +448,20 @@ function autoFillFileInput(pdfBlob, text) {
 // ============================================
 function waitForElement(selector, timeout = 5000) {
   return new Promise((resolve, reject) => {
+    // Check if element already exists
     const element = document.querySelector(selector);
     if (element) {
+      console.log(`Element found immediately: ${selector}`);
       resolve(element);
       return;
     }
 
+    console.log(`Waiting for element: ${selector}`);
+
     const observer = new MutationObserver(() => {
       const element = document.querySelector(selector);
       if (element) {
+        console.log(`Element found: ${selector}`);
         observer.disconnect();
         resolve(element);
       }
@@ -442,6 +474,7 @@ function waitForElement(selector, timeout = 5000) {
 
     setTimeout(() => {
       observer.disconnect();
+      console.error(`Timeout waiting for: ${selector}`);
       reject(new Error(`Timeout: ${selector}`));
     }, timeout);
   });
